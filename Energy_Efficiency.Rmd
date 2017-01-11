@@ -1,0 +1,117 @@
+---
+title: "Energy_Efficiency"
+author: "Myffy"
+date: "1/9/2017"
+output: html_document
+---
+
+Data used to build predictive model
+Energy efficiency 
+https://archive.ics.uci.edu/ml/datasets/Energy+efficiency
+Paper for Background : A. Tsanas, A. Xifara: 'Accurate quantitative estimation of energy performance of residential buildings using statistical machine learning tools', Energy and Buildings, Vol. 49, pp. 560-567, 2012 
+
+```{r, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+library(data.table)
+library(plyr)
+library(tables)
+library(corrplot)
+library(randomForest)
+library(PerformanceAnalytics)
+```
+
+Read in data and view
+
+```{r, echo=TRUE}
+#EE<- read.csv("~/ENB2012_data.csv")
+#summary(EE)
+str(EE)
+```
+Data summary. 
+
+We perform energy analysis using 12 different building shapes simulated in Ecotect. The buildings differ with respect to the glazing area, the glazing area distribution, and the orientation, amongst other parameters. We simulate various settings as functions of the afore-mentioned characteristics to obtain 768 building shapes. The dataset comprises 768 samples, eight attributes (or features, denoted by X1...X8) and two responses (or outcomes, denoted by y1 and y2). The aim is to use the eight features to predict each of the two responses. 
+
+Specifically: 
+X1  Relative Compactness 
+X2	Surface Area 
+X3	Wall Area 
+X4	Roof Area 
+X5	Overall Height 
+X6	Orientation 
+X7	Glazing Area 
+X8	Glazing Area Distribution 
+y1	Heating Load 
+y2	Cooling Load
+
+Frist we will test for correlations in the variables.
+Correlation of features (can alter model performance, variable autocorrelations are important to understand)
+```{r, message=FALSE, warning=FALSE}
+#varibles with p> 0.01 are left blank only significant correlations are shown in color. color intensity is proportional to the correlation coefficient.
+#library(corrplot)
+res <- cor(EE)
+#quartz()
+plot1<-corrplot(res, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+#library(PerformanceAnalytics)
+#quartz()
+chart.Correlation(EE, histogram=TRUE, pch=19)
+``` 
+
+Next we will create training (60%), CV (20%), and test (20%) datasets
+
+```{r}
+smp_size <- floor(0.6 * nrow(EE))
+## set the seed to make your partition reproductible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(EE)), size = smp_size)
+train <- EE[train_ind, ]
+split <- EE[-train_ind, ]
+
+smp_size2 <- floor(0.5 * nrow(split))
+## set the seed to make your partition reproductible, change seed to get different data partitions
+set.seed(123)
+train_ind2 <- sample(seq_len(nrow(split)), size = smp_size2)
+CV <- split[train_ind2, ]
+test <- split[-train_ind2, ]
+
+```
+
+Lets try the Random forest model and look at accuracy of the model for regression predicion
+
+```{r, echo=TRUE}
+#library(randomForest)
+rfreg_Y1 = randomForest(Y1~., data=train[,-10], mtry=3, ntree=100, importance=TRUE, 
+                      na.action=na.omit, keep.inbag=TRUE, keep.forest=TRUE)
+print(rfreg_Y1)
+rfpred_Y1<- predict(rfreg_Y1, newdata=CV[,-10])
+rfpredictions <- data.table(cbind(CV, rfpred_Y1))
+```
+
+
+Now we can look at varible importance. Normally we want to create the most parsimonious (fewest varibles with best performance) model, however this model is small and managable, so dropping varible is not required.
+```{r}
+#quartz()
+varImpPlot(rfregt1,col="blue",pch= 2)
+```
+
+Lets take a look at the yhat for the model and Mean Squared Error
+```{r}
+# Plot the error as the number of trees increases
+#quartz(); 
+plot(rfreg_Y1)
+
+#look at the fit, Y_hat vs. Y1
+#quartz()
+plot(rfpredictions$rfpred_Y1, rfpredictions$Y1)
+
+
+#Mean Squared Error
+mean((rfpredictions$rfpred_Y1-rfpredictions$Y1)^2)
+
+```
+
+Now its your turn:
+
+Add code to predict Y2. 
+
+Extra fun, set a cutoff value for Y1 and Y2 (lable "efficient", and "inefficient"), and predict probability of falling above or below the cutoff to create an energry efficient, or energy inefficient building.
+
