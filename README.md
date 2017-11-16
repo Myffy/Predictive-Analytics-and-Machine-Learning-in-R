@@ -4,5 +4,5 @@ In this repo you will find a breif presentation on Predicive analytics, supervis
 Also included are two R markdown files with R code, one for building a classification predictive model with random forest, 
 and the second one for building a regression model using random forest. 
 
-Also included are HTMl files for looking a the results and visulizations. 
+Also included are HTML files for looking at the results and visulizations. 
 
